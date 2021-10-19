@@ -8,10 +8,11 @@ const app = express()
 const bcrypt = require('bcrypt')
 const User = require('./models/UserModel')
 const jwt = require('jsonwebtoken');
-const morgan = require('morgan')
 const {body, validationResult} = require('express-validator')
 const base64Img = require('base64-img')
 const ImageSchema = require('./models/imageSchema') 
+
+
 
 
 app.set('secretKey', 'nodeRestApi')
@@ -48,14 +49,16 @@ app.post('/register', body('email').isEmail(), body('password').isLength({min:5}
                 }
                 else{
                     return res.status(401).json({
-                        title: "Email and Username is already used",
+                        title: "Error",
+                        message: "Email or username is already used."
                     })
                 }
                 })
             }
             else{
                 return res.status(401).json({
-                    title: "Email is already in use!",
+                    title: "Error",
+                    message: "Email is already in use!"
                 })
             }
         })
@@ -67,35 +70,32 @@ app.post('/register', body('email').isEmail(), body('password').isLength({min:5}
 // db.blogposts.insertOne({"comments": ["asd"]})
 app.post('/login', (req, res, next) => {
     User.findOne({email: req.body.email}, (err, user) => {
-        if(req.body.password == undefined && req.body.email == undefined){
-            return res.status(401).json({
-                title:"You write nothing",
-                message: "You need one email and min Character for password is 5"
-            })
-        }
         if(!user){
+            console.log("user not find")
             return res.status(401).json({
                 title:"User Not Found!",
                 message: "Invalid Credentials!"
             })
         }
-        else if(err){
-            return res.status(500)
-        }
-        const pwdresult = bcrypt.compareSync(req.body.password, user.password)
-        if(pwdresult){
-            let token = jwt.sign({userId: user._id}, 'secretKey')
-            return res.status(200).json({
-                message: "Logged in",
-                token:token
-        })
-        }
-        else if(!pwdresult){
-            return res.status(401).json({
-                title:"Wrong Password!",
-                message:"Wrong Password."
+        else{
+            if(err){
+                return res.status(500)
+            }
+            const pwdresult = bcrypt.compareSync(req.body.password, user.password)
+            if(pwdresult){
+                let token = jwt.sign({userId: user._id}, 'secretKey')
+                return res.status(200).json({
+                    message: "Logged in",
+                    token:token
+            })
+            }
+            else if(!pwdresult){
+                return res.status(401).json({
+                    title:"Wrong Password!",
+                    message:"Wrong Password."
             })
         }
+    }
     })
 })
 //Validate checker
@@ -132,20 +132,21 @@ app.get('/activeUser', (req, res, next) => {
         })
     })
 })
-app.put('/edit-user', async(req, res) =>{
+//Edit User
+app.put('/edit-user' ,async(req, res) =>{
     let token = req.headers.token
     jwt.verify(token, 'secretKey', (err, token) => {
         if(err){return res.status(401).json({title: "Invalid Token"})}
         else{
-            User.findOneAndUpdate({_id: token.userId},{$set:{image: req.body.image}}, {new: true} ,(err, user) => {
-                if(err){
-                    console.log(err)
-                }
-                else{
-                    return res.status(200).json({title:"User is edited"})
-                }                
-            })
-    }
+                User.findOneAndUpdate({_id: token.userId},{$set:{image: req.body.image, email: req.body.email, username: req.body.username}}, {new: true} ,(err, user) => {
+                    if(err){
+                        console.log(err)
+                    }
+                    else{
+                        return res.status(200).json({title:"User is edited"})
+                    }                
+                })
+            }
     })
 })
 //Delete User
@@ -191,24 +192,6 @@ app.delete('/images/:imagename', (req, res) => {
 
 })
 
-app.post('/images', async (req, res) => {
-    const { image } = req.body
-    const imgbody = new ImageSchema(req.body)
-    const img = base64Img.img(image, './images', Date.now(), (err, filePath) => {
-        const pathArr = filePath.split('/')
-        const fileName = pathArr[pathArr.length - 1]
-
-        res.status(200).json({
-            success:true,
-            url: 'http://localhost:8082/' + fileName
-        })
-    })
-    console.log(imgbody._id)
-    imgbody.image = img
-
-    imgbody.save()
-})
-
 
 mongoose.connect(mongoUri, {})
 .then(
@@ -220,7 +203,7 @@ mongoose.connect(mongoUri, {})
 
 app.get('/', (req, res) => res.send("Working!"))
 app.use(function(req, res, next){
-    res.set('Cache-control', 'public, max-age=300')
+    res.set('Cache-control', 'public, max-age=31536000')
 })
 
 app.listen(PORT, () => console.log("App is listening on: " + "-->" + PORT + "<--" + " port"))

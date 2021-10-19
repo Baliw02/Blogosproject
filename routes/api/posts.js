@@ -1,7 +1,5 @@
-const { Router, application, response } = require('express');
-const { token } = require('morgan');
+const { Router} = require('express');
 const BlogPosts = require('../../models/BlogPosts')
-const multer = require('multer')
 const router = new Router()
 
 
@@ -22,16 +20,24 @@ router.get('/', async(req, res) => {
 
 router.post('/create/', async(req, res) => {
     const new_BlogPost = new BlogPosts(req.body)
-    try{
-        const blogpost = await new_BlogPost.save()
-        if(!blogpost) throw new Error('Something went wrong while upload post!')
-        else{
-            res.status(200).json({title:"Everything is ok!"})
-        }
+    var title = req.body.title
+    var content = req.body.content
+    var image = req.body.image
+    if(title == null || title == undefined || title == ''){
+        return res.status(204).json({title:"Title is required"})
     }
-    catch(error){
-        res.status(500).json({message: error.message})
+    else if(content == null || content == undefined || content == ''){
+        return res.status(204).json({title:"Title is required"})
     }
+    else if(image == null || image == undefined || image == ''){
+        return res.status(204).json({title:"Title is required"})
+    }
+    const blogpost = await new_BlogPost.save()
+    if(!blogpost) throw new Error('Something went wrong while upload post!')
+    else{
+        res.status(200).json({title:"Everything is ok!"})
+    }
+        
 })
 router.put('/:id', async(req, res) =>{
     const {id} = req.params
@@ -48,10 +54,9 @@ router.put('/:id', async(req, res) =>{
 router.delete('/:id/comments', async(req, res) => {
     const {id} = req.params
     try{
-        console.log(req.headers.index)
         const getThePost = await BlogPosts.findByIdAndUpdate(id)
         var selectedComm = getThePost.comments[req.headers.index]
-        const response = await BlogPosts.findOneAndUpdate(id, {$pull:{comments: {profile: selectedComm.profile, message: selectedComm.message }}})
+        const response = await BlogPosts.findOneAndUpdate({_id: id}, {$pull:{comments: selectedComm},}, {new: true})
         
         if(!response){return res.status(401).json({title: "Dont find the comment"})}
         return res.status(200).json({title:"Comment is deleted"})

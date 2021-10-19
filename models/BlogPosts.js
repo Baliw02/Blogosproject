@@ -8,6 +8,7 @@ const BlogPostsSchema = new Schema(
     {
         image:{
             type: String,
+            required: true
         },
         link:{
             type: String,
@@ -49,6 +50,9 @@ const BlogPostsSchema = new Schema(
         special: {
             type: Boolean
         },
+        longContent:{
+            type: String
+        }
     }
 )
 const BlogPosts = model('blogposts', BlogPostsSchema)
